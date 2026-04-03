@@ -4,7 +4,11 @@ import pulp
 import numpy as np
 from tqdm import trange
 from tqdm import tqdm
-from .location_problem import solve_combined_problem
+from .location_problem import (
+    solve_combined_problem,
+    resolve_demand_series,
+    resolve_existing_facility_mask,
+)
 
 # Generate an initial population with random numbers
 def generate_population(res, accessibility_matrix_demand, population_size, number_res):
@@ -70,17 +74,31 @@ def mutation(offspring, res, mutation_rate):
     
     return offspring_mutationed
     
-def calculate_fitness(candidate_matrix, df, service_radius):
+def calculate_fitness(
+    candidate_matrix,
+    df,
+    service_radius,
+    demand_column=None,
+    prefer_existing=False,
+    existing_facility_discount=1.0,
+    existing_column=None,
+):
     try:
+        demand_quantity = resolve_demand_series(df, demand_column=demand_column)
+        existing_facility_mask = resolve_existing_facility_mask(df, existing_column=existing_column)
         facilities, capacities, fac2cli = solve_combined_problem(np.array(candidate_matrix),
                                                         service_radius,
-                                                        df['demand_without'])
+                                                        demand_quantity,
+                                                        existing_facility_mask=existing_facility_mask,
+                                                        prefer_existing=prefer_existing,
+                                                        existing_facility_discount=existing_facility_discount)
         dict_fitness = dict([(k,l) for k,l in enumerate(fac2cli) if len(l)>0])
 
         fitness = len(dict_fitness)
-        for key, _ in dict_fitness.items():
-            if df.loc[key, "capacity"] > 0:
-                    fitness -= 1
+        if prefer_existing:
+            for key, _ in dict_fitness.items():
+                if existing_facility_mask is not None and existing_facility_mask[key]:
+                    fitness -= float(existing_facility_discount)
 
         return fitness
     except RuntimeError:
@@ -88,7 +106,9 @@ def calculate_fitness(candidate_matrix, df, service_radius):
     
     # Main genetic algorithm
 def genetic_algorithm_main(matrix, edges, population_size, num_generations, df, 
-                      service_radius, mutation_rate, num_parents, num_offspring, number_res):
+                      service_radius, mutation_rate, num_parents, num_offspring, number_res,
+                      demand_column=None, prefer_existing=False,
+                      existing_facility_discount=1.0, existing_column=None):
     
     population, res_ost = generate_population(edges, matrix, population_size, number_res)
     fitness_history = []  # История изменения фитнеса
@@ -96,7 +116,18 @@ def genetic_algorithm_main(matrix, edges, population_size, num_generations, df,
     for generation in trange(num_generations):
         # Рассчитываем фитнес и отсортированную популяцию
         population_with_fitness = [
-            (individual, calculate_fitness(individual, df, service_radius))
+            (
+                individual,
+                calculate_fitness(
+                    individual,
+                    df,
+                    service_radius,
+                    demand_column=demand_column,
+                    prefer_existing=prefer_existing,
+                    existing_facility_discount=existing_facility_discount,
+                    existing_column=existing_column,
+                ),
+            )
             for individual in population
         ]
         

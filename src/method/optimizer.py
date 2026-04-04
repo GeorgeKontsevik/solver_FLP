@@ -29,10 +29,32 @@ def optimize_placement(
     fitness_history = []
     edges = []
 
+    if verbose:
+        print(
+            "[solver_flp] optimize_placement start "
+            f"use_genetic={use_genetic} "
+            f"service_radius={service_radius} "
+            f"keep_existing_capacity={keep_existing_capacity} "
+            f"allow_existing_expansion={allow_existing_expansion}",
+            flush=True,
+        )
+
     if use_genetic:
-        edges = choose_edges(sim_matrix=matrix, service_radius=service_radius)
+        edges = choose_edges(
+            sim_matrix=matrix,
+            service_radius=service_radius,
+            verbose=verbose,
+        )
         if num_offspring is None:
             num_offspring = population_size - num_parents
+        if verbose:
+            print(
+                "[solver_flp] genetic search "
+                f"candidate_edges={len(edges)} "
+                f"population={population_size} "
+                f"generations={num_generations}",
+                flush=True,
+            )
         best_candidate, fitness_history = genetic_algorithm_main(
             matrix=matrix,
             edges=edges,
@@ -48,6 +70,7 @@ def optimize_placement(
             prefer_existing=prefer_existing,
             existing_facility_discount=existing_facility_discount,
             existing_column=existing_column,
+            verbose=verbose,
         )
 
     capacities, res_id = block_coverage(
@@ -66,7 +89,7 @@ def optimize_placement(
         verbose=verbose,
     )
 
-    return {
+    result = {
         "best_candidate": best_candidate,
         "fitness_history": fitness_history,
         "edges": edges,
@@ -80,3 +103,11 @@ def optimize_placement(
         "allow_existing_expansion": allow_existing_expansion,
         "min_new_capacity": min_new_capacity,
     }
+    if verbose:
+        print(
+            "[solver_flp] optimize_placement done "
+            f"open_facilities={len(result['res_id'])} "
+            f"capacity_rows={len(result['capacities'])}",
+            flush=True,
+        )
+    return result

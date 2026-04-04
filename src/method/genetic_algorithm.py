@@ -108,12 +108,13 @@ def calculate_fitness(
 def genetic_algorithm_main(matrix, edges, population_size, num_generations, df, 
                       service_radius, mutation_rate, num_parents, num_offspring, number_res,
                       demand_column=None, prefer_existing=False,
-                      existing_facility_discount=1.0, existing_column=None):
+                      existing_facility_discount=1.0, existing_column=None,
+                      verbose=False):
     
     population, res_ost = generate_population(edges, matrix, population_size, number_res)
     fitness_history = []  # История изменения фитнеса
 
-    for generation in trange(num_generations):
+    for generation in trange(num_generations, disable=(not verbose), desc="[solver_flp] genetic"):
         # Рассчитываем фитнес и отсортированную популяцию
         population_with_fitness = [
             (
@@ -151,11 +152,11 @@ def genetic_algorithm_main(matrix, edges, population_size, num_generations, df,
 
     return best_candidate, fitness_history
 
-def choose_edges(sim_matrix, service_radius):
+def choose_edges(sim_matrix, service_radius, *, verbose=False):
 
     edges = []
 
-    for i in tqdm(sim_matrix.index):
+    for i in tqdm(sim_matrix.index, disable=(not verbose), desc="[solver_flp] edge candidates"):
         for j in sim_matrix.columns:
             if sim_matrix.loc[i, j] >= service_radius and i != j:
                 # Reduce by 40% if the value is 15 or greater

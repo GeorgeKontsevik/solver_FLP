@@ -173,7 +173,7 @@ def solve_combined_problem(
 
     # Решение задачи
     solver = pulp.PULP_CBC_CMD(
-        msg=bool(verbose),
+        msg=False,
     )
     started = time.time()
     if heartbeat_interval_sec is None:
@@ -196,6 +196,8 @@ def solve_combined_problem(
 
     pulse = 0
     while not done.wait(float(heartbeat_interval_sec)):
+        if not verbose:
+            continue
         pulse += 1
         print(
             f"[solver_flp] exact solve still running... "

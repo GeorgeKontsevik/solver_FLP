@@ -1,26 +1,31 @@
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
+from matplotlib.lines import Line2D
 import numpy as np
 
 
 
-def fitness_plot(fitness_history):
+def fitness_plot(fitness_history, *, show=True):
     avg_fitness_per_generation = [sum(scores)/len(scores) for scores in fitness_history]
     plt.plot(avg_fitness_per_generation)
     plt.xlabel("Generation")
     plt.ylabel("Average Fitness")
     plt.title("Evolution of Fitness Over Generations")
-    plt.show()
+    if show:
+        plt.show()
 
 
 def services_plot(df_before, df, res_id, services, size_factor=100, alpha=0.05, size_factor_2=100, alpha_2=0.05, x=20, y=50, x_2=10, y_2=50):
+    df_before = df_before.copy()
+    df = df.copy()
+    services = services.copy()
     df['new_service'] = df.index.map(lambda x: "новый сервис" if x in res_id.keys() else "нет сервиса")
     df.loc[((df_before['capacity'] != 0) & (df['new_service'] == "новый сервис")), 'new_service'] = "был сервис + новый"
     df.loc[((df_before['capacity'] != 0) & (df['new_service'] == "нет сервиса")), 'new_service'] = "был сервис"
     df['diff_capacity'] = df['capacity'] - df_before['capacity']
 
-    calc_temp = df[df['new_service'] == 'новый сервис']
+    calc_temp = df[df['new_service'] == 'новый сервис'].copy()
 
     max_capacity = calc_temp['capacity'].max()
     min_capacity = calc_temp['capacity'].min()
@@ -30,9 +35,9 @@ def services_plot(df_before, df, res_id, services, size_factor=100, alpha=0.05, 
 
     # Вычисляем размеры точек на основе нормализованных значений capacity
     if max_capacity == min_capacity:
-        calc_temp['marker_size'] = 300  # Задаем фиксированный размер
+        calc_temp.loc[:, 'marker_size'] = 300  # Задаем фиксированный размер
     else:
-        calc_temp['marker_size'] = ((calc_temp['capacity'] - min_capacity) / (max_capacity - min_capacity) + alpha) * size_factor
+        calc_temp.loc[:, 'marker_size'] = ((calc_temp['capacity'] - min_capacity) / (max_capacity - min_capacity) + alpha) * size_factor
 
 
     # Теперь рисуем точки с соответствующим размером, в зависимости от capacity
@@ -47,8 +52,6 @@ def services_plot(df_before, df, res_id, services, size_factor=100, alpha=0.05, 
         marker='*'
     )
 
-    new_service_added = False
-
     # Отображаем новый сервис с размерами точек в зависимости от capacity
     for idx, row in calc_temp.iterrows():
         size = calc_temp.loc[idx, 'marker_size']  # Получаем размер точки для этой строки
@@ -59,14 +62,7 @@ def services_plot(df_before, df, res_id, services, size_factor=100, alpha=0.05, 
                 f"{calc_temp.loc[idx, 'capacity']:.0f}", fontsize=12,)
                     # bbox=dict(facecolor='white', boxstyle='round,pad=0.1'))
 
-        # Добавляем метку в легенду только один раз
-        if not new_service_added:
-            ax.scatter([], [], color='red', label='new service')
-            new_service_added = True
-
-    new_service_added = False
-
-    calc_temp_2 = df[df['new_service'] == 'был сервис + новый']
+    calc_temp_2 = df[df['new_service'] == 'был сервис + новый'].copy()
 
     max_capacity = calc_temp_2['diff_capacity'].max()
     min_capacity = calc_temp_2['diff_capacity'].min()
@@ -76,9 +72,9 @@ def services_plot(df_before, df, res_id, services, size_factor=100, alpha=0.05, 
 
     # Вычисляем размеры точек на основе нормализованных значений capacity
     if max_capacity == min_capacity:
-        calc_temp_2['marker_size'] = size_factor_2  # Задаем фиксированный размер
+        calc_temp_2.loc[:, 'marker_size'] = size_factor_2  # Задаем фиксированный размер
     else:
-        calc_temp_2['marker_size'] = ((calc_temp_2['diff_capacity'] - min_capacity) / (max_capacity - min_capacity) + alpha_2) * size_factor_2
+        calc_temp_2.loc[:, 'marker_size'] = ((calc_temp_2['diff_capacity'] - min_capacity) / (max_capacity - min_capacity) + alpha_2) * size_factor_2
 
 
     for idx, row in calc_temp_2.iterrows():
@@ -90,12 +86,12 @@ def services_plot(df_before, df, res_id, services, size_factor=100, alpha=0.05, 
         ax.text(row.geometry.centroid.x - x_2, row.geometry.centroid.y + y_2,  # Смещение для текста
                 f"+{df[df['new_service'] == 'был сервис + новый'].loc[idx, 'diff_capacity']:.0f}", fontsize=12,)
         
-        if not new_service_added:
-            ax.scatter([], [], color='purple', label='upgraded service')
-            new_service_added = True
-
-    # Добавляем легенду
-    ax.legend(title="Service types", loc="upper left")
+    legend_handles = [
+        Line2D([0], [0], marker='*', color='w', label='old service', markerfacecolor="#108a00", markeredgecolor="#108a00", markersize=10),
+        Line2D([0], [0], marker='o', color='w', label='new service', markerfacecolor="red", markeredgecolor="red", markersize=8),
+        Line2D([0], [0], marker='^', color='w', label='upgraded service', markerfacecolor="purple", markeredgecolor="purple", markersize=8),
+    ]
+    ax.legend(handles=legend_handles, title="Service types", loc="upper left")
 
     ax.set_axis_off()
 

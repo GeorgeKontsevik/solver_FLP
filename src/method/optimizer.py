@@ -22,6 +22,7 @@ def optimize_placement(
     keep_existing_capacity=False,
     allow_existing_expansion=True,
     min_new_capacity=50.0,
+    fixed_new_capacity=None,
     heartbeat_interval_sec=None,
     verbose=False,
 ):
@@ -85,6 +86,7 @@ def optimize_placement(
         keep_existing_capacity=keep_existing_capacity,
         allow_existing_expansion=allow_existing_expansion,
         min_new_capacity=min_new_capacity,
+        fixed_new_capacity=fixed_new_capacity,
         heartbeat_interval_sec=heartbeat_interval_sec,
         verbose=verbose,
     )
@@ -102,6 +104,7 @@ def optimize_placement(
         "keep_existing_capacity": keep_existing_capacity,
         "allow_existing_expansion": allow_existing_expansion,
         "min_new_capacity": min_new_capacity,
+        "fixed_new_capacity": fixed_new_capacity,
     }
     if verbose:
         print(

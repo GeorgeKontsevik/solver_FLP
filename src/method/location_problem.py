@@ -2,6 +2,7 @@ import numpy as np
 import pulp
 import threading
 import time
+from tqdm import tqdm
 
 
 def build_unmet_target_series(df):
@@ -87,22 +88,46 @@ def add_capacity_constraints(
     range_facility,
     existing_capacity=None,
     min_new_capacity=50.0,
+    fixed_new_capacity=None,
+    progress=False,
 ):
-    for j in range_facility:
+    iterator = tqdm(
+        range_facility,
+        disable=(not progress),
+        desc="[solver_flp] constraints: capacity",
+        leave=False,
+    )
+    for j in iterator:
         problem += pulp.lpSum([demand[i] * z_vars[i, j] for i in range_client]) <= c_vars[j], f"capacity_constraint_{j}"
         problem += c_vars[j] <= y_vars[j] * 10000, f"open_capacity_constraint_{j}"
         # Minimum capacity is required only for newly opened facilities.
         # Existing facilities may have historical capacity below this threshold.
         if existing_capacity is None or float(existing_capacity[j]) <= 0.0:
-            problem += c_vars[j] >= y_vars[j] * float(min_new_capacity), f"min_capacity_constraint_{j}"
+            if fixed_new_capacity is not None:
+                problem += c_vars[j] == y_vars[j] * float(fixed_new_capacity), f"fixed_capacity_constraint_{j}"
+            else:
+                problem += c_vars[j] >= y_vars[j] * float(min_new_capacity), f"min_capacity_constraint_{j}"
         if existing_capacity is not None and float(existing_capacity[j]) > 0.0:
             # In baseline-preserving mode we do not allow the optimizer to
             # silently remove already existing service capacity.
             problem += c_vars[j] >= float(existing_capacity[j]), f"existing_capacity_floor_{j}"
 
 # 4. Ограничение на удовлетворение спроса
-def add_demand_constraints(problem, z_vars, accessibility_matrix, range_client, range_facility):
-    for i in range_client:
+def add_demand_constraints(
+    problem,
+    z_vars,
+    accessibility_matrix,
+    range_client,
+    range_facility,
+    progress=False,
+):
+    iterator = tqdm(
+        range_client,
+        disable=(not progress),
+        desc="[solver_flp] constraints: demand",
+        leave=False,
+    )
+    for i in iterator:
         problem += pulp.lpSum([accessibility_matrix[i, j] * z_vars[i, j] for j in range_facility]) == 1, f"demand_constraint_{i}"
 
 # Основная функция для решения объединенной задачи
@@ -117,6 +142,7 @@ def solve_combined_problem(
     prefer_existing=False,
     existing_facility_discount=1.0,
     min_new_capacity=50.0,
+    fixed_new_capacity=None,
     heartbeat_interval_sec=None,
     verbose=False,
 ):
@@ -161,15 +187,30 @@ def solve_combined_problem(
         range_facilities,
         existing_capacity=existing_capacity,
         min_new_capacity=min_new_capacity,
+        fixed_new_capacity=fixed_new_capacity,
+        progress=verbose,
     )
 
     if existing_capacity is not None and not allow_existing_expansion:
-        for j in range_facilities:
+        iterator = tqdm(
+            range_facilities,
+            disable=(not verbose),
+            desc="[solver_flp] constraints: existing",
+            leave=False,
+        )
+        for j in iterator:
             if float(existing_capacity[j]) > 0.0:
                 # Baseline-preserving placement mode: existing services stay
                 # exactly as they are, and the optimizer may only add new ones.
                 problem += c_vars[j] == float(existing_capacity[j]), f"existing_capacity_fixed_{j}"
-    add_demand_constraints(problem, z_vars, accessibility_matrix, range_clients, range_facilities)
+    add_demand_constraints(
+        problem,
+        z_vars,
+        accessibility_matrix,
+        range_clients,
+        range_facilities,
+        progress=verbose,
+    )
 
     # Решение задачи
     solver = pulp.PULP_CBC_CMD(
@@ -177,7 +218,7 @@ def solve_combined_problem(
     )
     started = time.time()
     if heartbeat_interval_sec is None:
-        heartbeat_interval_sec = 20.0
+        heartbeat_interval_sec = 1.0
 
     result_box = {}
     error_box = {}
@@ -195,20 +236,27 @@ def solve_combined_problem(
     thread.start()
 
     pulse = 0
+    solve_progress = tqdm(
+        total=0,
+        disable=(not verbose),
+        desc="[solver_flp] exact solve (running)",
+        leave=False,
+    )
     while not done.wait(float(heartbeat_interval_sec)):
-        if not verbose:
-            continue
         pulse += 1
-        print(
-            f"[solver_flp] exact solve still running... "
-            f"elapsed={time.time() - started:.1f}s pulse={pulse}",
-            flush=True,
-        )
+        solve_progress.update(1)
+    solve_progress.close()
 
     if "error" in error_box:
         raise error_box["error"]
 
     if verbose:
+        print(
+            "[solver_flp] exact solve setup "
+            f"clients={num_clients} facilities={num_facilities} "
+            f"variables={len(problem.variables())} constraints={len(problem.constraints)}",
+            flush=True,
+        )
         print(
             f"[solver_flp] exact solve finished in {time.time() - started:.1f}s "
             f"status={pulp.LpStatus[problem.status]}",
@@ -219,7 +267,13 @@ def solve_combined_problem(
         raise RuntimeError(f"Problem not solved: {pulp.LpStatus[problem.status]}.")
 
     fac2cli = []
-    for j in range(len(y_vars)):
+    iterator = tqdm(
+        range(len(y_vars)),
+        disable=(not verbose),
+        desc="[solver_flp] extract assignments",
+        leave=False,
+    )
+    for j in iterator:
         if y_vars[j].value() > 0:
             fac_clients = [
                 i
@@ -249,6 +303,7 @@ def block_coverage(
     keep_existing_capacity=False,
     allow_existing_expansion=True,
     min_new_capacity=50.0,
+    fixed_new_capacity=None,
     heartbeat_interval_sec=None,
     verbose=False,
 ):
@@ -268,6 +323,7 @@ def block_coverage(
                                                                 prefer_existing=prefer_existing,
                                                                 existing_facility_discount=existing_facility_discount,
                                                                 min_new_capacity=min_new_capacity,
+                                                                fixed_new_capacity=fixed_new_capacity,
                                                                 heartbeat_interval_sec=heartbeat_interval_sec,
                                                                 verbose=verbose)
     dict_info_hotels2 = dict([(k,l) for k,l in enumerate(fac2cli) if len(l)>0])

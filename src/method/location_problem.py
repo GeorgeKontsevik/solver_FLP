@@ -89,6 +89,7 @@ def add_capacity_constraints(
     existing_capacity=None,
     min_new_capacity=50.0,
     fixed_new_capacity=None,
+    max_facility_capacity=10000.0,
     progress=False,
 ):
     iterator = tqdm(
@@ -99,7 +100,7 @@ def add_capacity_constraints(
     )
     for j in iterator:
         problem += pulp.lpSum([demand[i] * z_vars[i, j] for i in range_client]) <= c_vars[j], f"capacity_constraint_{j}"
-        problem += c_vars[j] <= y_vars[j] * 10000, f"open_capacity_constraint_{j}"
+        problem += c_vars[j] <= y_vars[j] * float(max_facility_capacity), f"open_capacity_constraint_{j}"
         # Minimum capacity is required only for newly opened facilities.
         # Existing facilities may have historical capacity below this threshold.
         if existing_capacity is None or float(existing_capacity[j]) <= 0.0:
@@ -117,6 +118,7 @@ def add_demand_constraints(
     problem,
     z_vars,
     accessibility_matrix,
+    demand,
     range_client,
     range_facility,
     progress=False,
@@ -128,6 +130,8 @@ def add_demand_constraints(
         leave=False,
     )
     for i in iterator:
+        if float(demand[i]) <= 0.0:
+            continue
         problem += pulp.lpSum([accessibility_matrix[i, j] * z_vars[i, j] for j in range_facility]) == 1, f"demand_constraint_{i}"
 
 # Основная функция для решения объединенной задачи
@@ -177,6 +181,12 @@ def solve_combined_problem(
     ), "objective_function"
 
     # Ограничения
+    max_facility_capacity = max(10000.0, float(np.nansum(demand_quantity)))
+    if existing_capacity is not None:
+        max_facility_capacity = max(
+            max_facility_capacity,
+            float(np.nanmax(existing_capacity)) if len(existing_capacity) else 10000.0,
+        )
     add_capacity_constraints(
         problem,
         y_vars,
@@ -188,6 +198,7 @@ def solve_combined_problem(
         existing_capacity=existing_capacity,
         min_new_capacity=min_new_capacity,
         fixed_new_capacity=fixed_new_capacity,
+        max_facility_capacity=max_facility_capacity,
         progress=verbose,
     )
 
@@ -207,6 +218,7 @@ def solve_combined_problem(
         problem,
         z_vars,
         accessibility_matrix,
+        demand_quantity,
         range_clients,
         range_facilities,
         progress=verbose,

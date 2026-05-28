@@ -14,7 +14,6 @@ from .location_problem import (
 def generate_population(res, accessibility_matrix_demand, population_size, number_res):
     
     matrix_range = (0.5, 0.9)  
-    new_matrix = accessibility_matrix_demand.copy()
     pops = []
     res_selected = []
 
@@ -27,6 +26,7 @@ def generate_population(res, accessibility_matrix_demand, population_size, numbe
             res_selected.append(value)
 
     for _ in range(population_size):
+        new_matrix = accessibility_matrix_demand.copy().astype(float)
         for i in res_selected:
             new_matrix.loc[i[0], i[1]] = random.uniform(matrix_range[0], matrix_range[1])*accessibility_matrix_demand.loc[i[0], i[1]]
             new_matrix.loc[i[1], i[0]] = new_matrix.loc[i[0], i[1]]
@@ -50,8 +50,16 @@ def crossover(parents, num_offspring, matrix):
         parent1 = random.choice(parents)
         parent2 = random.choice(parents)
         crossover_point = random.randint(1, matrix_size - 1)
-        child1 = pd.DataFrame(np.vstack((parent1[:crossover_point], parent2[crossover_point:])))
-        child2 = pd.DataFrame(np.vstack((parent2[:crossover_point], parent1[crossover_point:])))
+        child1 = pd.DataFrame(
+            np.vstack((parent1[:crossover_point], parent2[crossover_point:])),
+            index=matrix.index,
+            columns=matrix.columns,
+        )
+        child2 = pd.DataFrame(
+            np.vstack((parent2[:crossover_point], parent1[crossover_point:])),
+            index=matrix.index,
+            columns=matrix.columns,
+        )
 
         offspring.append(child1)
         offspring.append(child2)
@@ -65,7 +73,7 @@ def mutation(offspring, res, mutation_rate):
     offspring_mutationed = []
 
     for child in offspring:
-        if random.random() < mutation_rate:
+        if res and random.random() < mutation_rate:
             index = random.choice(res)
             child.loc[index[0], index[1]] = random.uniform(matrix_range[0], matrix_range[1]) * child.loc[index[0], index[1]]
             child.loc[index[1], index[0]] = child.loc[index[0], index[1]]

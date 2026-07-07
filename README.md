@@ -13,9 +13,9 @@ flowchart LR
     PICK --> PLOT[diagnostic plots]
 ```
 
-## Main Image
+## Main Result
 
-![Facility-location solver workflow](docs/readme_project_map.svg)
+![Facility-location GA result](docs/readme_main_result.png)
 
 ## Run
 
@@ -31,7 +31,7 @@ Agent: state the mode explicitly: exact/non-genetic or genetic, and whether the 
 
 ## Publication
 
-Related dissertation publication bundle is in the parent thesis submodule.
+Related dissertation publication bundle is in the parent thesis submodule. The README result image is copied from the dissertation figure set.
 
 ## Next Steps / Heuristics
 

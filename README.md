@@ -1,19 +1,21 @@
 # solver_flp
 
-Facility location solver with exact and genetic modes.
+Facility-location problem solver for exact and genetic service-placement experiments.
 
-## Scheme
+## System Map
 
 ```mermaid
 flowchart LR
-    A[Inputs] --> B[Run: examples/using_example.ipynb]
-    B --> C[Checked outputs]
-    C --> D[Paper / thesis use]
+    DEM[demand weights] --> COST[cost matrix]
+    FAC[candidate facilities] --> COST
+    COST --> OPT[optimizer / genetic algorithm]
+    OPT --> PICK[selected locations]
+    PICK --> PLOT[diagnostic plots]
 ```
 
-## Main Result
+## Main Image
 
-![Main result](docs/readme_result.svg)
+![Facility-location solver workflow](docs/readme_project_map.svg)
 
 ## Run
 
@@ -25,14 +27,12 @@ Human:
 pip install -e . && jupyter notebook examples/using_example.ipynb
 ```
 
-Agent:
-
-Always state exact/non-genetic vs genetic mode and whether existing services can expand.
+Agent: state the mode explicitly: exact/non-genetic or genetic, and whether the scenario expands existing services or opens new ones.
 
 ## Publication
 
-No standalone publication tracked.
+Related dissertation publication bundle is in the parent thesis submodule.
 
 ## Next Steps / Heuristics
 
-Heuristic: prefer explicit flags over implicit solver defaults; track demand_left as practical unmet demand.
+Heuristic: use exact mode for small sanity checks before GA runs. Report unmet demand from the actual output field used by the current pipeline.

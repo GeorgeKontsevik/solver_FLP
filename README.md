@@ -1,5 +1,7 @@
 # solver_flp
 
+[![OSA-improved](https://img.shields.io/badge/improved%20by-OSA-yellow)](https://github.com/aimclub/OSA)
+
 Facility-location problem solver for exact and genetic service-placement experiments.
 
 ## System Map
@@ -36,3 +38,4 @@ Related dissertation publication bundle is in the parent thesis submodule. The R
 ## Next Steps / Heuristics
 
 Heuristic: use exact mode for small sanity checks before GA runs. Report unmet demand from the actual output field used by the current pipeline.
+

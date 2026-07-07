@@ -1,50 +1,38 @@
-![Solver FLP](https://sun9-46.userapi.com/impf/aUFBStH0x_6jN9UhgwrKN1WN4hZ9Y2HMMrXT2w/NuzVobaGlZ0.jpg?size=1590x400&quality=95&crop=0,0,1878,472&sign=9d33baa41a86de35d951d4bbd8011994&type=cover_group)
+# solver_flp
 
-# Solver FLP (Facility Location Problem Solver) 🏢📍
+Facility location solver with exact and genetic modes.
 
-**Описание**: Этот проект представляет собой решение задачи оптимизации расположения городских сервисов (Facility Location Problem, FLP) с использованием генетического алгоритма и метода линейного программирования. Задача заключается в нахождении наилучшего расположения объектов (например, поликлиник, школ и т. д.) для повышения обеспеченности выбранным городским сервисом населения рассматриваемой территории
+## Scheme
 
-## 🚀 Установка
-
-### 1. Библиотека может быть установлена с помощью pip:
-
-```bash
-pip install git+shttps://github.com/ValeriyaTikhevich/solver_FLP.git@main
+```mermaid
+flowchart LR
+    A[Inputs] --> B[Run: examples/using_example.ipynb]
+    B --> C[Checked outputs]
+    C --> D[Paper / thesis use]
 ```
 
-### 2. Либо можно склонировать репозиторий на Ваш локальный компьютер:
+## Main Result
+
+![Main result](docs/readme_result.svg)
+
+## Run
+
+Entrypoint: `examples/using_example.ipynb`
+
+Human:
 
 ```bash
-git clone https://github.com/ваш-аккаунт/solver_FLP.git
-cd solver_FLP
+pip install -e . && jupyter notebook examples/using_example.ipynb
 ```
 
-Создать виртуальное окружение:
+Agent:
 
-#### Для Windows:
-```bash
-make venv
-.venv\Scripts\activate
-```
+Always state exact/non-genetic vs genetic mode and whether existing services can expand.
 
-#### Для macOS/Linux::
-```bash
-make venv
-source .venv/bin/activate
-```
+## Publication
 
-И установить зависимости:
-```bash
-pip install .
-```
+No standalone publication tracked.
 
-## 🧑‍💻 Использование
+## Next Steps / Heuristics
 
-После установки Вы можете импортировать библиотеку и начать использовать её для решения задач:
-
-```bash
-from method import genetic_algorithm_main, choose_edges, fitness_plot
-```
-
-Примеры использования библиотеки и формата входных данных лежат в разделе **examples**.
-
+Heuristic: prefer explicit flags over implicit solver defaults; track demand_left as practical unmet demand.
